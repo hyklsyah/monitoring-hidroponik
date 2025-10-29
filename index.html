@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Sistem Hidroponik IoT (Firebase)</title>
+
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ========== GAYA (diringkas dari versi Anda, tidak diubah fungsinya) ========== */
+    :root {
+      --bg-color: #f0f2f5;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --primary-green: #198754;
+      --shadow-light: rgba(0, 0, 0, 0.08);
+      --danger-red: #e74c3c;
+      --warning-orange: #f39c12;
+      --navbar-color: #198754;
+      --navbar-hover-color: #157347;
+      --navbar-text-color: #ffffff;
+      --navbar-box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+    .navbar {
+      width: 100%;
+      background-color: var(--navbar-color);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed; top: 0; left: 0;
+      z-index: 100;
+      box-shadow: var(--navbar-box-shadow);
+    }
+    .navbar .brand { font-size: 1.8rem; font-weight: 600; color: var(--navbar-text-color); text-decoration: none; }
+    .navbar .brand:hover { color: var(--navbar-hover-color); }
+    .navbar .nav-links { display: flex; gap: 20px; }
+    .navbar .nav-links a {
+      color: var(--navbar-text-color);
+      text-decoration: none;
+      font-weight: 500; font-size: 1.1rem;
+      transition: color 0.3s ease, transform 0.3s ease;
+      padding: 8px 15px; border-radius: 8px;
+    }
+    .navbar .nav-links a:hover { color: var(--navbar-hover-color); background-color: rgba(0,0,0,0.1); transform: scale(1.1); }
+
+    .container {
+      width: 100%; max-width: 1200px; background-color: var(--card-bg);
+      border-radius: 12px; box-shadow: 0 8px 30px var(--shadow-light);
+      padding: 30px; margin-top: 80px;
+    }
+    .header { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #e0e0e0; margin-bottom: 30px; }
+    .header h1 { color: var(--primary-green); font-weight: 700; font-size: 2.5em; margin: 0; }
+    .header p { color: #7f8c8d; margin: 5px 0 0; font-size: 1em; }
+
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+    .card { background: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px var(--shadow-light); padding: 20px; text-align: center; transition: transform .2s, box-shadow .2s; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px var(--shadow-light); }
+    .card h3 { margin-top: 0; font-size: 1.2em; color: #555; font-weight: 600; }
+    .sensor-value { font-size: 2.5em; font-weight: 700; color: var(--primary-green); margin: 10px 0 5px; }
+    .sensor-unit { color: #95a5a6; font-size: .9em; }
+
+    .status { font-weight: 600; padding: 5px 10px; border-radius: 5px; margin-top: 10px; display: inline-block; }
+    .status.normal { background: rgba(46,204,113,.1); color: var(--primary-green); }
+    .status.warning{ background: rgba(243,156,18,.1); color: var(--warning-orange); }
+    .status.danger { background: rgba(231,76,60,.1); color: var(--danger-red); }
+
+    .controls, .chart-container, .log-container {
+      grid-column: 1 / -1; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 4px 15px var(--shadow-light); margin-top: 20px;
+    }
+    .controls h3, .chart-container h3, .log-container h3 { margin-top: 0; color: #555; font-weight: 600; text-align: left; }
+    .control-group { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .control-btn, .btn-sm {
+      padding: 12px 20px; font-size: 1em; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: background-color .2s, transform .1s; white-space: nowrap;
+    }
+    .control-btn { background-color: #bdc3c7; color: #333; }
+    .control-btn:hover { background-color: #95a5a6; transform: translateY(-2px); }
+    .control-btn.active { background-color: var(--primary-green); color: #fff; }
+    .control-btn#btn-reset { background-color: var(--danger-red); color: #fff; }
+    .control-btn#btn-reset:hover { background-color: #c0392b; }
+    .btn-sm { padding: 8px 15px; font-size: .9em; background-color: transparent; border: 1px solid #bdc3c7; color: #7f8c8d; }
+    .btn-sm:hover { background-color: #ecf0f1; }
+
+    .chart { text-align: center; padding: 50px 0; color: #95a5a6; background-color: #ecf0f1; border-radius: 8px; height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .log-entries { max-height: 250px; overflow-y: auto; border: 1px solid #ecf0f1; padding: 10px; border-radius: 8px; }
+    .log-entry { display: flex; justify-content: space-between; border-bottom: 1px dashed #ecf0f1; padding: 8px 0; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry .timestamp { color: #95a5a6; font-size: .8em; white-space: nowrap; margin-left: 10px; }
+
+    .card:nth-of-type(6){ text-align: left; }
+
+    @media (prefers-color-scheme: dark) {
+      :root { --bg-color:#1a1a2e; --card-bg:#2a2a44; --text-color:#e0e0e0; --shadow-light: rgba(0,0,0,.4); }
+      .card, .controls, .chart-container, .log-container { background: var(--card-bg); }
+      .header h1 { color: var(--primary-green); }
+      .header p, .conn { color: #b0b0d0; }
+      .card h3, .controls h3, .chart-container h3, .log-container h3 { color: #e0e0e0; }
+      .sensor-unit { color: #b0b0d0; }
+      .btn-sm { border-color: #555; color: #aaa; }
+      .btn-sm:hover { background-color: #333; }
+      .control-btn { background-color: #444; color: #e0e0e0; }
+      .control-btn:hover { background-color: #555; }
+      .chart { background-color: #20203a; color: #666; }
+      .log-entries { border-color: #444; }
+      .log-entry { border-bottom-color: #444; }
+      .log-entry .timestamp { color: #777; }
+    }
+    @media (max-width: 768px) { .dashboard { grid-template-columns: 1fr; } }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="dashboard.html" class="brand">Sistem Hidroponik IoT</a>
+    <div class="nav-links">
+      <a href="profile.html">Profil</a>
+      <a href="index.html" id="btn-logout">Keluar</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <header class="header">
+      <h1>🌿 Sistem Hidroponik IoT</h1>
+      <p>Rancang Bangun Budidaya Tanaman Selada Berbasis Internet of Things</p>
+      <div class="conn" id="conn">Menyambungkan ke Firebase…</div>
+    </header>
+
+    <section class="dashboard">
+      <!-- Sensor: Suhu -->
+      <article class="card">
+        <h3>💧 Suhu Air</h3>
+        <div class="sensor-value" id="suhu">--</div>
+        <div class="sensor-unit">°Celcius</div>
+        <div class="status normal" id="status-suhu">Normal</div>
+      </article>
+
+      <!-- Sensor: pH -->
+      <article class="card">
+        <h3>⚗️ pH Air Nutrisi</h3>
+        <div class="sensor-value" id="ph-air">--</div>
+        <div class="sensor-unit">pH</div>
+        <div class="status normal" id="status-ph">Normal</div>
+      </article>
+
+      <!-- Sensor: TDS/PPM -->
+      <article class="card">
+        <h3>🧪 Kadar Nutrisi (TDS)</h3>
+        <div class="sensor-value" id="tds">--</div>
+        <div class="sensor-unit">ppm</div>
+        <div class="status normal" id="status-tds">Normal</div>
+      </article>
+
+      <!-- Status Sistem -->
+      <article class="card">
+        <h3>⚙️ Status Sistem</h3>
+        <div style="margin-bottom: 15px;">
+          <strong>Pompa Air:</strong> <span id="status-pompa">Mati</span><br>
+          <strong>Lampu LED:</strong> <span id="status-lampu">Mati</span><br>
+          <strong>Sirkulasi:</strong> <span id="status-sirkulasi">Normal</span>
+        </div>
+      </article>
+
+      <!-- Kontrol Manual -->
+      <section class="controls">
+        <h3>🎛️ Kontrol Manual</h3>
+        <div class="control-group">
+          <button class="control-btn" id="btn-pompa">Pompa Air: OFF</button>
+          <button class="control-btn" id="btn-lampu">Lampu LED: OFF</button>
+          <button class="control-btn" id="btn-reset">Reset Sistem</button>
+          <button class="control-btn" id="btn-download">Download Data</button>
+        </div>
+      </section>
+
+      <!-- Grafik -->
+      <section class="chart-container">
+        <h3>📊 Grafik Data Sensor (24 Jam Terakhir)</h3>
+        <div class="chart">
+          Grafik Real-time akan ditampilkan di sini<br>
+          <small>(Tambahkan Chart.js untuk implementasi penuh)</small>
+        </div>
+      </section>
+
+      <!-- Log Aktivitas -->
+      <section class="log-container">
+        <h3>📋 Log Aktivitas Sistem</h3>
+        <div id="log-entries" class="log-entries"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- ====== Modul Firebase & App Anda ====== -->
+  <script type="module" src="./firebase.js"></script>
+  <script type="module" src="./main.js"></script>
+
+  <!-- ====== Autentikasi (opsional) & Logout ====== -->
+  <script type="module">
+    // Import auth dari firebase.js Anda (pastikan diexport)
+    import { auth } from './firebase.js';
+    import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js';
+
+    // Jika Anda TIDAK menggunakan auth, Anda bisa menghapus blok ini aman-aman saja.
+    try {
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          // Tidak ada user -> kembali ke halaman login
+          window.location.replace('./index.html');
+        } else {
+          console.log('User terautentikasi:', user.email);
+        }
+      });
+    } catch (e) {
+      // Jika auth tidak diexport di firebase.js, tidak fatal untuk dashboard sensor
+      console.warn('Auth opsional tidak aktif:', e?.message || e);
+    }
+
+    // Logout
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnLogout = document.getElementById('btn-logout');
+      if (!btnLogout) return;
+
+      btnLogout.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        try {
+          await signOut(auth);
+        } catch (e) {
+          console.warn('SignOut (opsional) error:', e?.message || e);
+        } finally {
+          window.location.replace('./index.html');
+        }
+      });
+    });
+  </script>
+
+  <!-- Bootstrap JS (opsional) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+<script type="module" src="./firebase.js"></script>
+<script type="module" src="./script.js"></script>
+
+</body>
+</html>
